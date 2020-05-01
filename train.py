@@ -20,7 +20,9 @@ from pgd_attack import LinfPGDAttack
 with open('config.json') as config_file:
     config = json.load(config_file)
 
-# seeding randomness
+num_classes=10
+
+# Seeding randomness
 tf.set_random_seed(config['tf_random_seed'])
 np.random.seed(config['np_random_seed'])
 
@@ -38,7 +40,7 @@ batch_size = config['training_batch_size']
 # Setting up the data and the model
 raw_cifar = cifar10_input.CIFAR10Data(data_path)
 global_step = tf.contrib.framework.get_or_create_global_step()
-model = Model(mode='train')
+model = Model(mode='train', num_classes=num_classes)
 
 # Setting up the optimizer
 boundaries = [int(sss[0]) for sss in step_size_schedule]
@@ -97,10 +99,15 @@ with tf.Session() as sess:
   for ii in range(max_num_training_steps):
     x_batch, y_batch = cifar.train_data.get_next_batch(batch_size,
                                                        multiple_passes=True)
+    y_batch = np.eye(num_classes)[y_batch]  # one hot coding
 
     # Compute Adversarial Perturbations
     start = timer()
-    x_batch_adv = attack.perturb(x_batch, y_batch, sess)
+    if config['AVmixup']:
+      x_batch_adv, y_batch_adv = attack.perturb_avmixup(x_batch, y_batch, config['gamma'], config['lambda1'], config['lambda2'], sess)
+    else: 
+      x_batch_adv = attack.perturb(x_batch, y_batch, sess)
+      y_batch_adv = y_batch
     end = timer()
     training_time += end - start
 
@@ -108,7 +115,7 @@ with tf.Session() as sess:
                 model.y_input: y_batch}
 
     adv_dict = {model.x_input: x_batch_adv,
-                model.y_input: y_batch}
+                model.y_input: y_batch_adv}
 
     # Output to stdout
     if ii % num_output_steps == 0:

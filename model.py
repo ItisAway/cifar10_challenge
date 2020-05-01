@@ -9,13 +9,14 @@ import tensorflow as tf
 class Model(object):
   """ResNet model."""
 
-  def __init__(self, mode):
+  def __init__(self, mode, num_classes):
     """ResNet constructor.
 
     Args:
       mode: One of 'train' and 'eval'.
     """
     self.mode = mode
+    self.num_classes = num_classes
     self._build_model()
 
   def add_internal_summaries(self):
@@ -34,7 +35,7 @@ class Model(object):
         tf.float32,
         shape=[None, 32, 32, 3])
 
-      self.y_input = tf.placeholder(tf.int64, shape=None)
+      self.y_input = tf.placeholder(tf.float32, shape=[None, self.num_classes])
 
 
       input_standardized = tf.map_fn(lambda img: tf.image.per_image_standardization(img),
@@ -81,17 +82,18 @@ class Model(object):
       x = self._global_avg_pool(x)
 
     with tf.variable_scope('logit'):
-      self.pre_softmax = self._fully_connected(x, 10)
+      self.pre_softmax = self._fully_connected(x, self.num_classes)
 
+    self.single_label = tf.cast(tf.argmax(self.y_input, axis=1), tf.int64)
     self.predictions = tf.argmax(self.pre_softmax, 1)
-    self.correct_prediction = tf.equal(self.predictions, self.y_input)
+    self.correct_prediction = tf.equal(self.predictions, self.single_label)
     self.num_correct = tf.reduce_sum(
         tf.cast(self.correct_prediction, tf.int64))
     self.accuracy = tf.reduce_mean(
         tf.cast(self.correct_prediction, tf.float32))
 
     with tf.variable_scope('costs'):
-      self.y_xent = tf.nn.sparse_softmax_cross_entropy_with_logits(
+      self.y_xent = tf.nn.softmax_cross_entropy_with_logits(
           logits=self.pre_softmax, labels=self.y_input)
       self.xent = tf.reduce_sum(self.y_xent, name='y_xent')
       self.mean_xent = tf.reduce_mean(self.y_xent)

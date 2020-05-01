@@ -5,6 +5,12 @@
   "_comment": "===== DATASET CONFIGURATION =====",
   "data_path": "cifar10_data",
 
+  "_comment": "===== AVMIXUP CONFIGURATION =====",
+  "AVmixup": true,
+  "gamma": 2.0,
+  "lambda1": 1.0,
+  "lambda2": 0.1,
+
   "_comment": "===== TRAINING CONFIGURATION =====",
   "tf_random_seed": 451760341,
   "np_random_seed": 216105420,
