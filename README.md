@@ -4,7 +4,7 @@ Code for the article "Adversarial Vertex Mixup: Toward Better Adversarially Robu
 
 This repository is forked from https://github.com/MadryLab/cifar10_challenge, to improve the robust generalization of PGD-based adversarial training (https://arxiv.org/abs/1706.06083).
 
-The following parts have been modified for AVmixup implementation.
+The following parts have been modified for the AVmixup implementation.
 1. Some configurations for AVmixup have been added to config.json.
 2. The label encoding has been changed from integer to one-hot encoding (for label-smoothing).
 3. AVmixup function has been implemented in pgd_attack.py
