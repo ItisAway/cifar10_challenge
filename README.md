@@ -1,5 +1,16 @@
 # Adversarial Vertex mixup
 
+Code for the article "Adversarial Vertex Mixup: Toward Better Adversarially Robust Generalization" (https://arxiv.org/abs/2003.02484), to be presented at CVPR 2020 (Oral presentation)
+
+This repository is forked from https://github.com/MadryLab/cifar10_challenge, to improve the robust generalization of PGD-based adversarial training (https://arxiv.org/abs/1706.06083).
+
+The following parts have been modified for AVmixup implementation.
+1. Some configurations for AVmixup have been added to config.json.
+2. The label encoding has been changed from integer to one-hot encoding (for label-smoothing).
+3. AVmixup function has been implemented in pgd_attack.py
+
+For reference, we leave the description of the parent repository below.
+
 # CIFAR10 Adversarial Examples Challenge
 
 Recently, there has been much progress on adversarial *attacks* against neural networks, such as the [cleverhans](https://github.com/tensorflow/cleverhans) library and the code by [Carlini and Wagner](https://github.com/carlini/nn_robust_attacks).
