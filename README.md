@@ -9,7 +9,7 @@ The following parts have been modified for the AVmixup implementation.
 2. The label encoding has been changed from integer to one-hot encoding (for label-smoothing).
 3. AVmixup function has been implemented in pgd_attack.py
 
-For reference, we leave the description of the parent repository below.
+For reference, we leave the description of the original repository below.
 
 # CIFAR10 Adversarial Examples Challenge
 
