@@ -9,13 +9,9 @@ import tensorflow as tf
 class Model(object):
   """ResNet model."""
 
-  def __init__(self, mode, num_classes):
+  def __init__(self, num_classes):
     """ResNet constructor.
-
-    Args:
-      mode: One of 'train' and 'eval'.
     """
-    self.mode = mode
     self.num_classes = num_classes
     self._build_model()
 
@@ -24,10 +20,9 @@ class Model(object):
 
   def _stride_arr(self, stride):
     """Map a stride scalar to the stride array for tf.nn.conv2d."""
-    return [1, stride, stride, 1]
+    return (stride, stride)
 
   def _build_model(self):
-    assert self.mode == 'train' or self.mode == 'eval'
     """Build the core model within the graph."""
     with tf.variable_scope('input'):
 
@@ -36,10 +31,12 @@ class Model(object):
         shape=[None, 32, 32, 3])
 
       self.y_input = tf.placeholder(tf.float32, shape=[None, self.num_classes])
+      self.is_training = tf.placeholder(tf.bool, shape=None)
 
 
       input_standardized = tf.map_fn(lambda img: tf.image.per_image_standardization(img),
                                self.x_input)
+      input_standardized = tf.transpose(input_standardized, [0, 3, 1, 2])
       x = self._conv('init_conv', input_standardized, 3, 3, 16, self._stride_arr(1))
 
 
@@ -102,14 +99,14 @@ class Model(object):
   def _batch_norm(self, name, x):
     """Batch normalization."""
     with tf.name_scope(name):
-      return tf.contrib.layers.batch_norm(
+      return tf.layers.batch_normalization(
           inputs=x,
-          decay=.9,
+          momentum=.9,
+          epsilon=1e-5,
           center=True,
           scale=True,
-          activation_fn=None,
-          updates_collections=None,
-          is_training=(self.mode == 'train'))
+          axis=1,
+          training=self.is_training)
 
   def _residual(self, x, in_filter, out_filter, stride,
                 activate_before_residual=False):
@@ -131,14 +128,13 @@ class Model(object):
     with tf.variable_scope('sub2'):
       x = self._batch_norm('bn2', x)
       x = self._relu(x, 0.1)
-      x = self._conv('conv2', x, 3, out_filter, out_filter, [1, 1, 1, 1])
+      x = self._conv('conv2', x, 3, out_filter, out_filter, self._stride_arr(1))
 
     with tf.variable_scope('sub_add'):
       if in_filter != out_filter:
-        orig_x = tf.nn.avg_pool(orig_x, stride, stride, 'VALID')
+        orig_x = self._avg_pool(orig_x, stride, stride)
         orig_x = tf.pad(
-            orig_x, [[0, 0], [0, 0], [0, 0],
-                     [(out_filter-in_filter)//2, (out_filter-in_filter)//2]])
+            orig_x, [[0, 0], [(out_filter-in_filter)//2, (out_filter-in_filter)//2], [0, 0], [0, 0]])
       x += orig_x
 
     tf.logging.debug('image after unit %s', x.get_shape())
@@ -148,7 +144,7 @@ class Model(object):
     """L2 weight decay loss."""
     costs = []
     for var in tf.trainable_variables():
-      if var.op.name.find('DW') > 0:
+      if 'kernel' in var.name:
         costs.append(tf.nn.l2_loss(var))
     return tf.add_n(costs)
 
@@ -156,33 +152,45 @@ class Model(object):
     """Convolution."""
     with tf.variable_scope(name):
       n = filter_size * filter_size * out_filters
-      kernel = tf.get_variable(
-          'DW', [filter_size, filter_size, in_filters, out_filters],
-          tf.float32, initializer=tf.random_normal_initializer(
-              stddev=np.sqrt(2.0/n)))
-      return tf.nn.conv2d(x, kernel, strides, padding='SAME')
+      init = tf.random_normal_initializer(stddev=np.sqrt(2.0/n))
+      layer = tf.layers.Conv2D(
+          out_filters,
+          kernel_size=filter_size,
+          strides=strides,
+          padding='same',
+          data_format='channels_first',
+          dilation_rate=(1,1),
+          use_bias=False,
+          kernel_initializer=init)
+      return layer.apply(x)
+
+  def _avg_pool(self, x, size, strides):
+      return tf.layers.average_pooling2d(x, size, strides, 'valid', data_format='channels_first')
 
   def _relu(self, x, leakiness=0.0):
     """Relu, with optional leaky support."""
     return tf.where(tf.less(x, 0.0), leakiness * x, x, name='leaky_relu')
 
+  def _batch_flatten(self, x):
+      """
+      Flatten the tensor except the first dimension.
+      """
+      shape = x.get_shape().as_list()[1:]
+      if None not in shape:
+          return tf.reshape(x, [-1, int(np.prod(shape))])
+      return tf.reshape(x, tf.stack([tf.shape(x)[0], -1]))
+
   def _fully_connected(self, x, out_dim):
-    """FullyConnected layer for final output."""
-    num_non_batch_dimensions = len(x.shape)
-    prod_non_batch_dimensions = 1
-    for ii in range(num_non_batch_dimensions - 1):
-      prod_non_batch_dimensions *= int(x.shape[ii + 1])
-    x = tf.reshape(x, [tf.shape(x)[0], -1])
-    w = tf.get_variable(
-        'DW', [prod_non_batch_dimensions, out_dim],
-        initializer=tf.uniform_unit_scaling_initializer(factor=1.0))
-    b = tf.get_variable('biases', [out_dim],
-                        initializer=tf.constant_initializer())
-    return tf.nn.xw_plus_b(x, w, b)
+      """FullyConnected layer for final output."""
+      inputs = self._batch_flatten(x)
+      init = tf.uniform_unit_scaling_initializer(factor=1.0)
+      layer = tf.layers.Dense(
+          units=out_dim,
+          use_bias=True,
+          kernel_initializer=init,
+          bias_initializer=tf.constant_initializer())
+      return layer.apply(inputs)
 
   def _global_avg_pool(self, x):
     assert x.get_shape().ndims == 4
-    return tf.reduce_mean(x, [1, 2])
-
-
-
+    return tf.reduce_mean(x, [2, 3])

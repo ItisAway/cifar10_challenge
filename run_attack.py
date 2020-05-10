@@ -25,7 +25,7 @@ data_path = config['data_path']
 def run_attack(checkpoint, x_adv, epsilon):
   cifar = cifar10_input.CIFAR10Data(data_path)
 
-  model = Model(mode='eval')
+  model = Model(num_classes=10)
 
   saver = tf.train.Saver()
 
@@ -56,8 +56,10 @@ def run_attack(checkpoint, x_adv, epsilon):
 
       x_batch = x_adv[bstart:bend, :]
       y_batch = cifar.eval_data.ys[bstart:bend]
+      y_batch = np.eye(10)[y_batch]
 
       dict_adv = {model.x_input: x_batch,
+                  model.is_training: False,
                   model.y_input: y_batch}
       cur_corr, y_pred_batch = sess.run([model.num_correct, model.predictions],
                                         feed_dict=dict_adv)

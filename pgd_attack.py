@@ -40,7 +40,7 @@ class LinfPGDAttack:
 
     self.grad = tf.gradients(loss, model.x_input)[0]
 
-  def perturb(self, x_nat, y, sess):
+  def perturb(self, x_nat, y, sess, is_training):
     """Given a set of examples (x_nat, y), returns a set of adversarial
        examples within epsilon of x_nat in l_infinity norm."""
     if self.rand:
@@ -51,6 +51,7 @@ class LinfPGDAttack:
 
     for i in range(self.num_steps):
       grad = sess.run(self.grad, feed_dict={self.model.x_input: x,
+                                            self.model.is_training: is_training,
                                             self.model.y_input: y})
 
       x = np.add(x, self.step_size * np.sign(grad), out=x, casting='unsafe')
@@ -63,7 +64,7 @@ class LinfPGDAttack:
   def _label_smoothing(self, one_hot, factor):
     return one_hot * factor + (one_hot - 1.) * ((factor-1) / float(self.model.num_classes - 1))
 
-  def perturb_avmixup(self, x_nat, y, gamma, lambda1, lambda2, sess):
+  def perturb_avmixup(self, x_nat, y, gamma, lambda1, lambda2, sess, is_training):
     """Given a set of examples (x_nat, y), returns a set of training
        examples constructed by AVmixup."""
     if self.rand:
@@ -74,6 +75,7 @@ class LinfPGDAttack:
 
     for i in range(self.num_steps):
       grad = sess.run(self.grad, feed_dict={self.model.x_input: x,
+                                            self.model.is_training: is_training,
                                             self.model.y_input: y})
 
       x = np.add(x, self.step_size * np.sign(grad), out=x, casting='unsafe')
@@ -109,7 +111,7 @@ if __name__ == '__main__':
     print('No model found')
     sys.exit()
 
-  model = Model(mode='eval')
+  model = Model(num_classes=10)
   attack = LinfPGDAttack(model,
                          config['epsilon'],
                          config['num_steps'],

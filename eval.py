@@ -13,6 +13,7 @@ import math
 import os
 import sys
 import time
+import numpy as np
 
 import tensorflow as tf
 
@@ -35,7 +36,7 @@ cifar = cifar10_input.CIFAR10Data(data_path)
 
 if eval_on_cpu:
   with tf.device("/cpu:0"):
-    model = Model(mode='eval')
+    model = Model(num_classes=10)
     attack = LinfPGDAttack(model,
                            config['epsilon'],
                            config['num_steps'],
@@ -43,7 +44,7 @@ if eval_on_cpu:
                            config['random_start'],
                            config['loss_func'])
 else:
-  model = Model(mode='eval')
+  model = Model(num_classes=10)
   attack = LinfPGDAttack(model,
                          config['epsilon'],
                          config['num_steps'],
@@ -85,6 +86,7 @@ def evaluate_checkpoint(filename):
 
       x_batch = cifar.eval_data.xs[bstart:bend, :]
       y_batch = cifar.eval_data.ys[bstart:bend]
+      y_batch = np.eye(10)[y_batch]
 
       dict_nat = {model.x_input: x_batch,
                   model.y_input: y_batch}
