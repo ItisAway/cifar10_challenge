@@ -55,6 +55,7 @@ learning_rate = tf.train.piecewise_constant(
     boundaries,
     values)
 total_loss = tf.add_n([model.mean_xent, tf.multiply(weight_decay, model.weight_decay_loss)])
+update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
 with tf.control_dependencies(update_ops):
     train_step = tf.train.MomentumOptimizer(learning_rate, momentum).minimize(
         total_loss,
