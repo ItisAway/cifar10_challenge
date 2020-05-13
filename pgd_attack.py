@@ -145,7 +145,7 @@ if __name__ == '__main__':
       y_batch = cifar.eval_data.ys[bstart:bend]
       y_batch = np.eye(10)[y_batch]
 
-      x_batch_adv = attack.perturb(x_batch, y_batch, sess)
+      x_batch_adv = attack.perturb(x_batch, y_batch, sess, is_training=False)
 
       x_adv.append(x_batch_adv)
 

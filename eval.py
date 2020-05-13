@@ -89,11 +89,13 @@ def evaluate_checkpoint(filename):
       y_batch = np.eye(10)[y_batch]
 
       dict_nat = {model.x_input: x_batch,
+                  model.is_training: False,
                   model.y_input: y_batch}
 
-      x_batch_adv = attack.perturb(x_batch, y_batch, sess)
+      x_batch_adv = attack.perturb(x_batch, y_batch, sess, is_training=False)
 
       dict_adv = {model.x_input: x_batch_adv,
+                  model.is_training: False,
                   model.y_input: y_batch}
 
       cur_corr_nat, cur_xent_nat = sess.run(
