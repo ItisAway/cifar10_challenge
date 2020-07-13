@@ -13,7 +13,10 @@ For reference, we leave the description of the original repository below.
 
 ### A pre-trained AVmixup model
 
+PGD
 https://www.dropbox.com/s/uh0gdr44rluvpnz/AVmixup_model.tar.gz?dl=0
+FeatureScatter
+https://www.dropbox.com/s/blurxqpnkr89wtb/checkpoint-198?dl=0
 
 
 # CIFAR10 Adversarial Examples Challenge
